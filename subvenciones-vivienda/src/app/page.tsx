@@ -3,7 +3,7 @@ import { Search, Bell, Activity, Users, FileText, ChevronRight } from 'lucide-re
 import { supabase } from '@/lib/supabase';
 import SubvencionCard, { SubvencionType } from '@/components/SubvencionCard';
 
-export const revalidate = 3600; // ISR: revalidate every hour
+export const revalidate = 0; // ISR disabled for fresh data
 
 async function getStats() {
   const { count: totalActivas } = await supabase

@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import SubvencionCard, { SubvencionType } from '@/components/SubvencionCard';
 import Filtros from '@/components/Filtros';
 
-export const revalidate = 60; // ISR but mostly dynamic if searchParams are present
+export const revalidate = 0; // ISR disabled for fresh data
 
 export default async function SubvencionesPage({
     searchParams,
