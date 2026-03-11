@@ -67,9 +67,11 @@ export default function SubvencionCard({ subvencion }: Props) {
 
             {/* Title & Description */}
             <div className="flex-grow">
-                <h3 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {subvencion.titulo}
-                </h3>
+                <Link href={`/subvenciones/${subvencion.id}`} className="block">
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {subvencion.titulo}
+                    </h3>
+                </Link>
                 <p className="text-sm text-slate-500 mb-6 line-clamp-3">
                     {subvencion.descripcion}
                 </p>
@@ -104,13 +106,10 @@ export default function SubvencionCard({ subvencion }: Props) {
                 </div>
 
                 <Link
-                    href={subvencion.url_oficial}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all duration-300 gap-2 border border-blue-100 hover:border-transparent"
+                    href={`/subvenciones/${subvencion.id}`}
+                    className="mt-2 flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all duration-300 gap-2 border border-blue-100 hover:border-transparent"
                 >
-                    Ver convocatoria oficial
-                    <ExternalLink className="w-4 h-4" />
+                    Ver detalles completos
                 </Link>
             </div>
 
