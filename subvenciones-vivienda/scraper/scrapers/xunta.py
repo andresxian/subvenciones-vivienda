@@ -59,25 +59,31 @@ def scrape_dog() -> list:
         # This is a very basic structure assuming a specific DOG HTML structure.
         # It needs to be adapted based on the actual live site's DOM.
         
-        items = soup.find_all('li') # Placeholder for actual elements
+        items = soup.find_all('a') 
+        seen_titles = set()
+        
         for item in items:
-            titulo = item.text.strip()
-            if any(kw.lower() in titulo.lower() for kw in KEYWORDS):
-                link_elem = item.find('a')
-                url_oficial = f"https://www.xunta.gal{link_elem['href']}" if link_elem and 'href' in link_elem.attrs else url
+            href = item.get('href', '')
+            if '/dog/Publicados/' in href:
+                titulo = item.text.strip()
+                if not titulo or len(titulo) < 15 or titulo in seen_titles: continue
+                seen_titles.add(titulo)
                 
-                sub = {
-                    "titulo": titulo,
-                    "descripcion": titulo[:500],
-                    "organismo": "Xunta de Galicia (DOG)",
-                    "ambito": "galicia",
-                    "tipo": _detectar_tipo(titulo),
-                    "beneficiario": _detectar_beneficiario(titulo),
-                    "fecha_publicacion": today.strftime('%Y-%m-%d'),
-                    "url_oficial": url_oficial,
-                    "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
-                }
-                subvenciones.append(sub)
+                if any(kw.lower() in titulo.lower() for kw in KEYWORDS):
+                    url_oficial = f"https://www.xunta.gal{href}" if href.startswith('/') else href
+                    
+                    sub = {
+                        "titulo": titulo,
+                        "descripcion": titulo[:500],
+                        "organismo": "Xunta de Galicia (DOG)",
+                        "ambito": "galicia",
+                        "tipo": _detectar_tipo(titulo),
+                        "beneficiario": _detectar_beneficiario(titulo),
+                        "fecha_publicacion": today.strftime('%Y-%m-%d'),
+                        "url_oficial": url_oficial,
+                        "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
+                    }
+                    subvenciones.append(sub)
                 
     except Exception as e:
         logger.error(f"Error extrayendo DOG: {str(e)}")

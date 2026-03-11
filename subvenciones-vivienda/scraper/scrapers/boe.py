@@ -42,59 +42,27 @@ def _detectar_beneficiario(titulo: str) -> str:
 def scrape_boe() -> list:
     subvenciones = []
     today = datetime.now()
-    fecha_str = today.strftime('%Y%m%d')
-    url = f"https://boe.es/diario_boe/xml.php?id=BOE-S-{today.strftime('%Y-%m-%d')}"
+    url = "https://www.boe.es/rss/canal.php?c=ayudas"
     
     try:
-        time.sleep(1) # respetando 1s de delay
-        response = requests.get(url, timeout=10)
+        import feedparser
+        time.sleep(1)
+        feed = feedparser.parse(url)
         
-        # Fallback RSS
-        if response.status_code != 200:
-            logger.warning(f"Error fetching BOE XML: {response.status_code}. Using RSS fallback.")
-            import feedparser
-            rss_url = "https://www.boe.es/rss/boe.php"
-            feed = feedparser.parse(rss_url)
+        for entry in feed.entries:
+            titulo = entry.title
             
-            for entry in feed.entries:
-                titulo = entry.title
-                if any(kw.lower() in titulo.lower() for kw in KEYWORDS):
-                    sub = {
-                        "titulo": titulo,
-                        "descripcion": entry.summary[:500] if 'summary' in entry else "",
-                        "organismo": "BOE",
-                        "ambito": "estatal",
-                        "tipo": _detectar_tipo(titulo),
-                        "beneficiario": _detectar_beneficiario(titulo),
-                        "fecha_publicacion": today.strftime('%Y-%m-%d'),
-                        "url_oficial": entry.link,
-                        "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
-                    }
-                    subvenciones.append(sub)
-            return subvenciones
-
-        root = ET.fromstring(response.content)
-        
-        for item in root.findall('.//item'):
-            titulo_elem = item.find('titulo')
-            if titulo_elem is None or not titulo_elem.text:
-                continue
-            
-            titulo = titulo_elem.text
-            
+            # Since this feed is ALL grants, we only extract the housing-related ones.
             if any(kw.lower() in titulo.lower() for kw in KEYWORDS):
-                url_elem = item.find('urlXml')
-                url_oficial = f"https://www.boe.es{url_elem.text}" if url_elem is not None else ""
-                
                 sub = {
                     "titulo": titulo,
-                    "descripcion": titulo[:500], # BOE XML sometimes doesn't have a long summary in standard structure
+                    "descripcion": entry.summary[:500] if 'summary' in entry else titulo[:500],
                     "organismo": "BOE",
                     "ambito": "estatal",
                     "tipo": _detectar_tipo(titulo),
                     "beneficiario": _detectar_beneficiario(titulo),
                     "fecha_publicacion": today.strftime('%Y-%m-%d'),
-                    "url_oficial": url_oficial,
+                    "url_oficial": entry.link,
                     "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
                 }
                 subvenciones.append(sub)

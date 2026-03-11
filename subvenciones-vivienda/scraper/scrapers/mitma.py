@@ -18,7 +18,8 @@ def scrape_mitma() -> list:
     url = "https://www.mivau.gob.es/vivienda/ayudas"
     
     headers = {
-        'User-Agent': 'Mozilla/5.0 (compatible; SubvencionesBot/1.0)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
     }
 
     try:
@@ -31,21 +32,23 @@ def scrape_mitma() -> list:
 
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Find cards or sections with aids
-        # The structure is assumed, adjust as necessary if the real website differs
-        cards = soup.select('.card, .ayuda-item, article') 
+        # Universal fallback: search all links
+        links = soup.find_all('a')
+        seen_titles = set()
         
-        for card in cards:
-            title_elem = card.find(['h2', 'h3', 'h4'])
-            if title_elem:
-                titulo = title_elem.text.strip()
-                desc_elem = card.find('p')
-                descripcion = desc_elem.text.strip()[:500] if desc_elem else titulo
-                
-                link_elem = card.find('a')
-                url_oficial = link_elem['href'] if link_elem and 'href' in link_elem.attrs else url
-                if url_oficial.startswith('/'):
-                    url_oficial = f"https://www.mivau.gob.es{url_oficial}"
+        KEYWORDS = ['vivienda', 'rehabilitación', 'eficiencia', 'alquiler', 'adquisición', 'compra', 'accesibilidad', 'bono']
+        
+        for link in links:
+            titulo = link.text.strip()
+            # Only process links that represent an article/grant title (long enough, contains keywords)
+            if len(titulo) > 20 and titulo not in seen_titles and any(kw.lower() in titulo.lower() for kw in KEYWORDS):
+                seen_titles.add(titulo)
+                href = link.get('href', '')
+                if not href or href.startswith('javascript:'):
+                    continue
+                    
+                url_oficial = f"https://www.mivau.gob.es{href}" if href.startswith('/') else href
+                descripcion = titulo[:500]
                 
                 # Determine type heuristically from the title
                 t = titulo.lower()
