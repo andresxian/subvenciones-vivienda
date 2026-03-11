@@ -8,7 +8,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-KEYWORDS = ['vivenda', 'vivienda', 'rehabilitación', 'eficiencia', 'reforma', 'subvención', 'axuda', 'ayuda', 'comunidade', 'enerxética']
+KEYWORDS = ['vivenda', 'vivienda', 'rehabilitación de edificios', 'eficiencia enerxética', 'eficiencia energética en', 'reforma de vivenda', 'reforma de vivienda', 'comunidade de propietarios', 'comunidad de propietarios', 'compra de vivenda', 'compra de vivienda', 'aluguer', 'alquiler de vivienda', 'accesibilidade en vivenda', 'accesibilidad en vivienda', 'bono alugueiro xove', 'bono alquiler joven', 'plan estatal']
 
 def _get_hash(titulo: str, fecha_publicacion: str) -> str:
     hash_str = f"{titulo}_{fecha_publicacion}".encode('utf-8')
@@ -35,6 +35,28 @@ def _detectar_beneficiario(titulo: str) -> str:
     if 'empresa' in t or 'profesional' in t or 'autónomo' in t:
         return 'empresa'
     return 'particular'
+    
+import re
+def _clean_title(titulo: str) -> str:
+    prefixes = [
+        r"(?i)^resolución do \d+ de [a-z]+ de \d+ [^,]+,\s*pola que se [a-z]+( \w+)* as bases reguladoras para a concesión de (subvencións|axudas)\s*",
+        r"(?i)^orde do \d+ de [a-z]+ de \d+ [^,]+,\s*pola que se establecen as bases reguladoras aplicables á concesión de (as )?(axudas|subvencións)\s*"
+    ]
+    cleaned = titulo
+    for prefix in prefixes:
+        cleaned = re.sub(prefix, "", cleaned)
+    if cleaned:
+        cleaned = cleaned[0].upper() + cleaned[1:]
+    return cleaned if len(cleaned) > 10 else titulo
+
+def _extract_amount(text: str):
+    matches = re.findall(r'(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)\s*(?:euros|€)', text, re.IGNORECASE)
+    if matches:
+        try:
+            return float(matches[0].replace('.', '').replace(',', '.'))
+        except:
+            pass
+    return None
 
 def scrape_dog() -> list:
     subvenciones = []
@@ -71,15 +93,24 @@ def scrape_dog() -> list:
                 
                 if any(kw.lower() in titulo.lower() for kw in KEYWORDS):
                     url_oficial = f"https://www.xunta.gal{href}" if href.startswith('/') else href
+                    clean_t = _clean_title(titulo)
+                    importe = _extract_amount(titulo)
+                    
+                    import datetime as dt
+                    fecha_fin_plazo = None
+                    if 'prazo de' in titulo.lower() or 'días hábiles' in titulo.lower():
+                        fecha_fin_plazo = (today + dt.timedelta(days=30)).strftime('%Y-%m-%d')
                     
                     sub = {
-                        "titulo": titulo,
+                        "titulo": clean_t,
                         "descripcion": titulo[:500],
                         "organismo": "Xunta de Galicia (DOG)",
                         "ambito": "galicia",
                         "tipo": _detectar_tipo(titulo),
                         "beneficiario": _detectar_beneficiario(titulo),
+                        "importe_max": importe,
                         "fecha_publicacion": today.strftime('%Y-%m-%d'),
+                        "fecha_fin_plazo": fecha_fin_plazo,
                         "url_oficial": url_oficial,
                         "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
                     }

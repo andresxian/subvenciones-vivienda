@@ -36,11 +36,10 @@ def scrape_mitma() -> list:
         links = soup.find_all('a')
         seen_titles = set()
         
-        KEYWORDS = ['vivienda', 'rehabilitación', 'eficiencia', 'alquiler', 'adquisición', 'compra', 'accesibilidad', 'bono']
+        KEYWORDS = ['vivienda', 'rehabilitación de edificios', 'eficiencia energética en', 'reforma de vivienda', 'comunidad de propietarios', 'compra de vivienda', 'alquiler de vivienda', 'regeneración urbana', 'accesibilidad en vivienda', 'rehabilitación residencial', 'arrendamiento de vivienda', 'bono alquiler joven', 'plan estatal de vivienda', 'ayudas a la vivienda']
         
         for link in links:
             titulo = link.text.strip()
-            # Only process links that represent an article/grant title (long enough, contains keywords)
             if len(titulo) > 20 and titulo not in seen_titles and any(kw.lower() in titulo.lower() for kw in KEYWORDS):
                 seen_titles.add(titulo)
                 href = link.get('href', '')
@@ -50,7 +49,6 @@ def scrape_mitma() -> list:
                 url_oficial = f"https://www.mivau.gob.es{href}" if href.startswith('/') else href
                 descripcion = titulo[:500]
                 
-                # Determine type heuristically from the title
                 t = titulo.lower()
                 tipo = 'otros'
                 if 'reforma' in t or 'rehabilitación' in t: tipo = 'reforma'
@@ -58,14 +56,36 @@ def scrape_mitma() -> list:
                 elif 'compra' in t: tipo = 'compra'
                 elif 'eficiencia' in t: tipo = 'eficiencia_energetica'
                 
+                # Heuristics
+                import re
+                import datetime as dt
+                
+                # Cleanup title
+                clean_t = re.sub(r"(?i)^(resolución|orden) (de \d+ de [a-z]+ de \d+)?.*convocan? (las )?(ayudas|subvenciones) ", "", titulo)
+                if clean_t: clean_t = clean_t[0].upper() + clean_t[1:]
+                
+                # Amount
+                importe = None
+                matches = re.findall(r'(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)\s*(?:euros|€)', titulo, re.IGNORECASE)
+                if matches:
+                    try: importe = float(matches[0].replace('.', '').replace(',', '.'))
+                    except: pass
+                
+                # Deadline (heuristic)
+                fecha_fin_plazo = None
+                if 'plazo de' in t or 'días hábiles' in t:
+                    fecha_fin_plazo = (today + dt.timedelta(days=30)).strftime('%Y-%m-%d')
+                
                 sub = {
-                    "titulo": titulo,
+                    "titulo": clean_t if len(clean_t) > 10 else titulo,
                     "descripcion": descripcion,
                     "organismo": "MITMA",
                     "ambito": "estatal",
                     "tipo": tipo,
-                    "beneficiario": "particular", # Default for now
+                    "beneficiario": "particular",
+                    "importe_max": importe,
                     "fecha_publicacion": today.strftime('%Y-%m-%d'),
+                    "fecha_fin_plazo": fecha_fin_plazo,
                     "url_oficial": url_oficial,
                     "hash_contenido": _get_hash(titulo, today.strftime('%Y-%m-%d'))
                 }
