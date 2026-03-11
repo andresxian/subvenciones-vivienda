@@ -14,9 +14,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r scraper/requirements.txt
+        run: |
+          cd subvenciones-vivienda
+          pip install -r scraper/requirements.txt
       - name: Run Emailer
-        run: python scraper/emailer.py
+        run: |
+          cd subvenciones-vivienda
+          python scraper/emailer.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
